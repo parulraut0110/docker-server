@@ -1,0 +1,18 @@
+services:
+  spring-server:
+    build: .
+    ports:
+      - "8080:8080"
+    container_name: docker-spring-server
+    restart: on-failure
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      JAVA_OPTS: "-Xmx512m -Xms256m" # Set JVM memory options
+    volumes:
+      - ./spring-server.p12:/app/spring-server.p12
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    external: true

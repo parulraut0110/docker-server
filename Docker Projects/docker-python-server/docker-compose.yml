@@ -1,0 +1,17 @@
+# docker-compose.yml
+
+services:
+  python-server:
+    build: .
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./python-server.crt:/app/python-server.crt
+      - ./python-server.key:/app/python-server.key
+      - ./docker-python-server.py:/app/docker-python-server.py
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    external: true
