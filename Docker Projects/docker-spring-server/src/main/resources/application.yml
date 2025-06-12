@@ -2,10 +2,11 @@ spring:
   application:
     name: docker-spring-server
 server:
-  port: 8080
+  port: 8443
   ssl:
     enabled: true
-    key-store: file:G:/Docker Projects/docker-spring-server/spring-server.p12
+    #key-store: file:G:/Docker Projects/docker-spring-server/spring-server.p12
+    key-store: file:/app/spring-server.p12
     key-store-password: changeit
     key-store-type: PKCS12
     key-alias: docker-spring-server
@@ -17,8 +18,3 @@ python:
 webclient:
   ssl:
     trust-all-certificates: false
-logging:
-  level:
-    org.springframework.boot: DEBUG
-    io.netty: DEBUG
-    org.springframework.web: DEBUG

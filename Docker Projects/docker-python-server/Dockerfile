@@ -11,3 +11,6 @@ RUN pip install --no-index --find-links=/packages flask
 
 EXPOSE 5000
 CMD ["python", "docker-python-server.py"]
+
+
+

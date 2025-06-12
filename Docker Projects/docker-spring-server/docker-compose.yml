@@ -2,7 +2,7 @@ services:
   spring-server:
     build: .
     ports:
-      - "8080:8080"
+      - "8443:8443"
     container_name: docker-spring-server
     restart: on-failure
     environment:
