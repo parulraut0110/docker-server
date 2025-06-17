@@ -1,0 +1,22 @@
+spring:
+  application:
+    name: docker-kafka-spring-server
+  kafka:
+    bootstrap-servers: kafka:9092
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+    consumer:
+      group-id: spring-group
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        packages: com.parul.docker_kafka_spring_pythonserver
+  port: 8443
+  ssl:
+    enabled: true  
+    key-store: file:/app/spring-server.p12   
+    key-store-password: changeit
+    key-store-type: PKCS12
+    key-alias: docker-spring-server
+    

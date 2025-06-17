@@ -1,0 +1,47 @@
+services:
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.7.1
+    container_name: zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 20000
+    networks:
+      - app-network
+
+  kafka:
+    image: confluentinc/cp-kafka:7.7.1
+    container_name: kafka
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT:zookeeper: 2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+
+  spring-server:
+    build:
+      context: ./spring-server
+      dockerfile: Dockerfile
+    ports:
+      - "8443:8443"
+    container_name: spring-server
+    restart: on-failure
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      JAVA_OPTS: "-Xmx512m -Xms256m"
+    networks:
+      - app-network
+
+  python-server:
+    build:
+      context: ./python-server
+      dockerfile: Dockerfile
+    container_name: python-server
+    restart: on-failure
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    external: true

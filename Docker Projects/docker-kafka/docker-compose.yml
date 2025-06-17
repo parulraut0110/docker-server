@@ -1,0 +1,60 @@
+#version: '3.8'
+
+services:
+    # ZooKeeper (Kafka's metadata store - necessary for older Kafka versions or traditional setups)
+    zookeeper:
+        image: confluentinc/cp-zookeeper:7.5.0 # Using a Confluent Platform image, which is common
+        hostname: zookeeper
+        container_name: zookeeper
+        ports:
+            - "2181:2181" # Default ZooKeeper client port
+        environment:
+            ZOOKEEPER_CLIENT_PORT: 2181
+            ZOOKEEPER_TICK_TIME: 2000
+        volumes:
+            - zookeeper_data:/var/lib/zookeeper/data # Persistent data for ZooKeeper
+            - zookeeper_log:/var/lib/zookeeper/log # Persistent logs for ZooKeeper
+
+    # Kafka Broker
+    kafka:
+        image: confluentinc/cp-kafka:7.5.0 # Confluent Platform Kafka image
+        hostname: kafka
+        container_name: kafka
+        ports:
+            - "9092:9092" # Port for clients to connect to Kafka
+            - "9093:9093" # Internal port for inter-broker communication (important for Docker)
+        environment:
+            KAFKA_BROKER_ID: 1
+            KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181 # Connects to the ZooKeeper service defined above
+            KAFKA_LISTENERS: PLAINTEXT://kafka:9093,PLAINTEXT_HOST://0.0.0.0:9092
+            KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9093,PLAINTEXT_HOST://localhost:9092 # How clients outside Docker connect
+            KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+            KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1 # For single-broker setup, this is crucial
+            KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+            # ** IMPORTANT FOR LEARNING: SET SMALL RETENTION **
+            KAFKA_LOG_RETENTION_HOURS: 2 # Retain messages for only 2 hours to save disk space
+            KAFKA_LOG_RETENTION_BYTES: 1073741824 # ~1GB max per partition, also to save disk space
+            KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+        depends_on:
+            - zookeeper # Ensure ZooKeeper starts before Kafka
+        volumes:
+            - kafka_data:/var/lib/kafka/data # Persistent data for Kafka logs/messages
+
+    # Optional: Kafka UI (a web-based GUI for managing Kafka)
+    kafka-ui:
+        image: provectuslabs/kafka-ui:latest
+        container_name: kafka-ui
+        ports:
+            - "8080:8080" # Access the UI on localhost:8080
+        environment:
+            KAFKA_CLUSTERS_0_NAME: local-kafka # Name displayed in the UI
+            KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9093 # Connects to the Kafka service within Docker network
+            KAFKA_CLUSTERS_0_ZOOKEEPER: zookeeper:2181 # Connects to ZooKeeper for advanced features (optional)
+            KAFKA_CLUSTERS_0_JMXPORT: 9991 # Optional: if you enable JMX on Kafka
+        depends_on:
+            - kafka
+
+volumes:
+    zookeeper_data:
+    zookeeper_log:
+    kafka_data:
