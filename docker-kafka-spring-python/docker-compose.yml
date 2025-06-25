@@ -1,0 +1,83 @@
+services:
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.7.1
+    container_name: kafka-spring-py-zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000 #heartbeat interval
+    networks:
+      - app-network
+    ports:
+      - "2181:2181" # Expose for potential external access or testing ZK health (optional for this setup)
+    healthcheck:
+      # <--- ZOOKEEPER HEALTHCHECK DEFINITION
+      test: [ "CMD-SHELL", "nc -z localhost 2181 || exit 1" ] # Check if Zookeeper client port is open and responsive
+      interval: 10s # Check every 10 seconds
+      timeout: 5s # Wait up to 5 seconds for test to pass
+      retries: 3 # 3 consecutive failures before marked unhealthy
+      start_period: 15s # Give Zookeeper 15s to start before health checks count
+
+  kafka:
+    image: confluentinc/cp-kafka:7.7.1 #pre-built Kafka image
+    container_name: kafka-spring-py
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: kafka-spring-py-zookeeper:2181 # Use service name
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka-spring-py:9092 # Internal listener for clients
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092 # Listen on all interfaces inside container
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true" # Allows automatic topic creation
+    ports:
+      - "9092:9092" # Expose Kafka to host machine (e.g., for local dev tools)
+    networks:
+      - app-network
+    depends_on:
+      # <--- KAFKA DEPENDS ON ZOOKEEPER BEING HEALTHY
+      zookeeper:
+        condition: service_healthy
+    healthcheck:
+      # <--- KAFKA HEALTHCHECK DEFINITION
+      test: [ "CMD-SHELL", "kafka-broker-api-versions --bootstrap-server localhost:9092 || exit 1" ] # Use Kafka's own tool to check API availability
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s # Kafka often needs more time to fully initialize and register
+
+  python-server:
+    build:
+      context: ./python-server
+      dockerfile: Dockerfile
+    container_name: python-server
+    networks:
+      - app-network
+    depends_on:
+      # <--- PYTHON SERVER DEPENDS ON KAFKA BEING HEALTHY
+      kafka:
+        condition: service_healthy
+    environment:
+      # Pass Kafka broker address to your Python app if it expects an env var
+      KAFKA_BROKER_HOST: kafka-spring-py:9092
+    # You might want to expose a port here if your Python server has a web endpoint
+    # ports:
+    #   - "8000:8000" # Example if your Flask/FastAPI app runs on 8000
+
+    # Assuming this is your spring-server, add it here
+  spring-server:
+    build:
+      context: ./spring-server # Adjust path if your Spring app is elsewhere
+      dockerfile: Dockerfile # Adjust Dockerfile name if different
+    container_name: spring-server
+    networks:
+      - app-network
+    depends_on:
+      # <--- SPRING SERVER DEPENDS ON KAFKA BEING HEALTHY
+      kafka:
+        condition: service_healthy
+    ports:
+      - "8443:8443" # Expose Spring's port to host machine #this is the fornt end server hence port exposed
+
+networks:
+  app-network:
+    external: true # Use the existing external network
